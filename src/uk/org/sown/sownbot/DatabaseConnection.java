@@ -1,0 +1,287 @@
+package uk.org.sown.sownbot;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+import com.mysql.jdbc.CommunicationsException;
+
+public class DatabaseConnection {
+	
+	private String host;
+	private String database;
+	private String username;
+	private String password;
+	
+	private Connection conn;
+	private Thread connectionCloser;
+	private static int connectionCloseTimeout = 5 * 60 * 1000;
+	
+	public DatabaseConnection(String host, String database, String username, String password)
+	{
+		this.host = host;
+		this.database = database;
+		this.username = username;
+		this.password = password;
+	}
+	
+	/**
+	 * Execute a simple query
+	 * @param queryString The query to execute
+	 * @return The set of results
+	 * @throws Exception
+	 */
+	public ResultSet ExecuteQuery(String queryString) throws Exception
+	{	
+		Connection conn = getConnection();
+		try {
+			synchronized (conn) {			
+				PreparedStatement ps = conn.prepareStatement(queryString);
+				return ps.executeQuery();
+			}
+		// If the SQL connection died and we didn't notice until it was too late, try again
+		} catch (CommunicationsException e) {
+			conn = getConnection();
+			synchronized (conn) {			
+				PreparedStatement ps = conn.prepareStatement(queryString);
+				return ps.executeQuery();
+			}
+		}
+	}
+	
+	/**
+	 * Get a connection to the database
+	 * @return A connection
+	 * @throws Exception
+	 */
+	private Connection getConnection() throws Exception
+	{
+		synchronized (this) {
+			if (this.conn == null || this.conn.isClosed()) {
+				try
+				{
+					Class.forName("com.mysql.jdbc.Driver").newInstance(); 
+				}
+				catch (Exception ex)
+				{
+					throw ex;
+				}
+				try
+				{ 
+					conn = DriverManager.getConnection("jdbc:mysql://" + host + "/" + database, 
+					           username, password);
+					
+					// Automatically close the connection after a given time.
+					connectionCloser = new Thread(){
+						@Override
+						public void run() {
+							while (true) {
+								try {
+									Thread.sleep(DatabaseConnection.connectionCloseTimeout);
+								} catch (InterruptedException e) {
+									// If we were woken early; reset the timer.
+									continue;
+								}
+								// If we waited the whole period, break.
+								break;
+							}
+							synchronized (conn) {
+								try {
+									if (DatabaseConnection.this.conn != null &&
+											!DatabaseConnection.this.conn.isClosed()){
+										DatabaseConnection.this.conn.close();
+									}
+								} catch (SQLException e) {
+									// Why would this happen?
+									e.printStackTrace();
+								}
+							}
+						}
+					};
+					connectionCloser.start();
+					
+					return conn;
+				}
+				catch (SQLException ex)
+				{
+					throw ex;
+				}				
+			} else {
+				if (connectionCloser != null && connectionCloser.isAlive()) {
+					connectionCloser.interrupt();
+				}
+				return this.conn;
+			}
+		}
+	}
+
+	/**
+	 * Execute a query with string parameters
+	 * @param queryString The query to execute
+	 * @param params The parameters
+	 * @return The set of results
+	 * @throws Exception
+	 */
+	public ResultSet ExecuteQuery(String queryString, String[] params) throws Exception {
+		Connection conn = getConnection();
+		try {
+			synchronized (conn) {		
+				PreparedStatement ps = conn.prepareStatement(queryString);
+				for(int i=0; i<params.length; i++)
+					ps.setString(i + 1, params[i]);
+
+				return ps.executeQuery();
+			}
+		// If the SQL connection died and we didn't notice until it was too late, try again
+		} catch (CommunicationsException e) {
+			conn = getConnection();
+			synchronized (conn) {		
+				PreparedStatement ps = conn.prepareStatement(queryString);
+				for(int i=0; i<params.length; i++)
+					ps.setString(i + 1, params[i]);
+
+				return ps.executeQuery();
+			}
+		}
+	}
+
+	/**
+	 * Execute an update with string parameters
+	 * @param queryString The update to execute
+	 * @param params The parameters
+	 * @return The number of affected rows
+	 * @throws Exception
+	 */
+	public int ExecuteUpdate(String queryString, String[] params) throws Exception {
+		Connection conn = getConnection();
+		try {
+			synchronized (conn) {
+				PreparedStatement ps = conn.prepareStatement(queryString);
+				for(int i=0; i<params.length; i++)
+					ps.setString(i + 1, params[i]);
+
+				return ps.executeUpdate();
+			}
+		// If the SQL connection died and we didn't notice until it was too late, try again
+		} catch (CommunicationsException e) {
+			conn = getConnection();
+			synchronized (conn) {
+				PreparedStatement ps = conn.prepareStatement(queryString);
+				for(int i=0; i<params.length; i++)
+						ps.setString(i + 1, params[i]);
+
+				return ps.executeUpdate();
+			}	
+		}
+	}
+	
+	/**
+	 * Execute an insert with string parameters, returning auto generated Keys
+	 * @param queryString The update to execute
+	 * @param params The parameters
+	 * @return The autogenerated keys (if any).
+	 * @throws Exception
+	 */
+	public ResultSet ExecuteInsert(String queryString, String[] params) throws Exception {
+		Connection conn = getConnection();
+		try {
+			synchronized (conn) {
+				PreparedStatement ps = conn.prepareStatement(queryString, Statement.RETURN_GENERATED_KEYS);
+				for(int i=0; i<params.length; i++)
+					ps.setString(i + 1, params[i]);
+
+				ps.executeUpdate();
+				return ps.getGeneratedKeys();
+			}
+		// If the SQL connection died and we didn't notice until it was too late, try again
+		} catch (CommunicationsException e) {
+			conn = getConnection();
+			synchronized (conn) {
+				PreparedStatement ps = conn.prepareStatement(queryString, Statement.RETURN_GENERATED_KEYS);
+				for(int i=0; i<params.length; i++)
+					ps.setString(i + 1, params[i]);
+
+				ps.executeUpdate();
+				return ps.getGeneratedKeys();
+			}
+		}
+	}
+
+
+	/**
+	 * Execute an update with int parameters
+	 * @param queryString The update to execute
+	 * @param params The parameters
+	 * @return The number of affected rows
+	 * @throws Exception
+	 */
+	public int ExecuteUpdate(String queryString, int[] params) throws Exception {
+			Connection conn = getConnection();
+		try {
+			synchronized (conn) {
+				PreparedStatement ps = conn.prepareStatement(queryString);
+				for(int i=0; i<params.length; i++)
+				{
+					ps.setInt(i + 1, params[i]);
+				}
+				return ps.executeUpdate();
+			}
+		// If the SQL connection died and we didn't notice until it was too late, try again
+		} catch (CommunicationsException e) {
+			conn = getConnection();
+			synchronized (conn) {
+				PreparedStatement ps = conn.prepareStatement(queryString);
+				for(int i=0; i<params.length; i++)
+						ps.setInt(i + 1, params[i]);
+
+				return ps.executeUpdate();
+			}
+		}
+	}
+	
+	/**
+	 * Execute an update with a string and an int parameter
+	 * @param queryString The update to execute
+	 * @param stringParam The string parameter
+	 * @param intParam The int parameter
+	 * @return The number of affected rows
+	 * @throws Exception
+	 */
+	public int ExecuteUpdate(String queryString, String stringParam, int intParam) throws Exception {
+		Connection conn = getConnection();
+		try {
+			synchronized (conn) {
+				PreparedStatement ps = conn.prepareStatement(queryString);
+				ps.setString(1, stringParam);
+				ps.setInt(2, intParam);
+				return ps.executeUpdate();
+			}
+		// If the SQL connection died and we didn't notice until it was too late, try again
+		} catch (CommunicationsException e) {
+			conn = getConnection();
+			synchronized (conn) {
+				PreparedStatement ps = conn.prepareStatement(queryString);
+				ps.setString(1, stringParam);
+				ps.setInt(2, intParam);
+				return ps.executeUpdate();
+			}
+		}
+	}
+
+	/*
+	public ResultSet ExecuteUpdate(String queryString, int int1, int int2, String string1,
+			String string2) throws Exception {
+		Connection conn = getConnection();
+		PreparedStatement ps = conn.prepareStatement(queryString, PreparedStatement.RETURN_GENERATED_KEYS);
+		ps.setString(1, string1);
+		ps.setString(2, string2);
+		ps.setInt(3, int1);
+		ps.setInt(4, int2);
+		ps.executeUpdate();
+		return ps.getGeneratedKeys();
+	}
+	*/
+}
