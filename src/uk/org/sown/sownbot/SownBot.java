@@ -62,6 +62,7 @@ public class SownBot extends UserInfoTrackingPircBot {
 			try {
 				p = new Properties();
 				p.put("bot-name", "SOWN-Bot-UNNAMED");
+				p.put("bot-nick-pass", "CHANGEME");
                         p.put("irc-host", "irc.example.org");
                         p.put("irc-chan", "#sown");
 				p.put("listen-port", "4444");
@@ -87,6 +88,7 @@ public class SownBot extends UserInfoTrackingPircBot {
 		}
 		ArrayList<String> errors = new ArrayList<String>();
 		pBotName = getProperty(p, errors, "bot-name");
+		String pBotNickPass = getProperty(p, errors, "bot-nick-pass");
 		String pLogDbHost = getProperty(p, errors, "log-db-host");
 		String pLogDbName = getProperty(p, errors, "log-db-name");
 		String pLogDbUser = getProperty(p, errors, "log-db-user");
@@ -165,6 +167,15 @@ public class SownBot extends UserInfoTrackingPircBot {
 		
 		// Connect to the IRC server.
 		this.doConnect();
+		
+		// Identify with NickServ
+		try {
+			Thread.sleep(3000);
+		} 
+		catch(InterruptedException e) {
+			e.printStackTrace();
+		}
+		this.identify(pBotNickPass);
 	}
 	
 	@SuppressWarnings("unchecked")

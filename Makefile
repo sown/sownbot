@@ -24,7 +24,7 @@ all: compile
 # Java version 6 or greater
 
 compile:
-	javac -cp $(LIBS) -sourcepath $(SRC_DIR) -d $(BIN_DIR) $(SRC_DIR)/Bot.java $(SRC_DIR)/org/jrdf/parser/rdfxml/RdfXmlParser.java
+	javac -Xlint:deprecation -cp $(LIBS) -sourcepath $(SRC_DIR) -d $(BIN_DIR) $(SRC_DIR)/Bot.java $(SRC_DIR)/org/jrdf/parser/rdfxml/RdfXmlParser.java
 
 clean:
 	rm -rf $(BIN_DIR)
