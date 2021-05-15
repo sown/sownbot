@@ -41,6 +41,7 @@ public class SownBot extends UserInfoTrackingPircBot {
 	private String[] pIrcHostList;
 	private String pBotName;
 	private String pIrcChan;
+	private String pBotNickPass;
 	
 	private Map<String, InteractiveSownBotModule> modulesByKeywords = new HashMap<String, InteractiveSownBotModule>();
 	private Map<Class<AbstractSownBotModule>, AbstractSownBotModule> modulesByClass = new HashMap<Class<AbstractSownBotModule>, AbstractSownBotModule>();
@@ -88,7 +89,7 @@ public class SownBot extends UserInfoTrackingPircBot {
 		}
 		ArrayList<String> errors = new ArrayList<String>();
 		pBotName = getProperty(p, errors, "bot-name");
-		String pBotNickPass = getProperty(p, errors, "bot-nick-pass");
+		pBotNickPass = getProperty(p, errors, "bot-nick-pass");
 		String pLogDbHost = getProperty(p, errors, "log-db-host");
 		String pLogDbName = getProperty(p, errors, "log-db-name");
 		String pLogDbUser = getProperty(p, errors, "log-db-user");
@@ -167,15 +168,6 @@ public class SownBot extends UserInfoTrackingPircBot {
 		
 		// Connect to the IRC server.
 		this.doConnect();
-		
-		// Identify with NickServ
-		try {
-			Thread.sleep(3000);
-		} 
-		catch(InterruptedException e) {
-			e.printStackTrace();
-		}
-		this.identify(pBotNickPass);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -498,8 +490,11 @@ public class SownBot extends UserInfoTrackingPircBot {
 					{}
 				}
 				
-				if (this.isConnected())
+				if (this.isConnected()) {
+					// Identify with NickServ once connected
+					this.identify(this.pBotNickPass);
 					break;
+				}
 			}
 			
 		}
