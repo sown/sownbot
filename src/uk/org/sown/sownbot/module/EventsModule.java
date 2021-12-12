@@ -105,6 +105,7 @@ public class EventsModule extends InteractiveSownBotModule {
 		uri_prefix = eventsUri;
 		wiki_prefix = uri_prefix + "/wiki/";
 		resolver_prefix = wiki_prefix + "Special:URIResolver/";
+		resolver_prefix = resolver_prefix.replace("https:", "http:"); // URIs in semantic queries still use http not https.
 		export_prefix = wiki_prefix + "Special:ExportRDF/";
 		index_prefix = uri_prefix + "/w/index.php";
 		category_workshop_type_uri = URI.create(resolver_prefix + "Category-3AWorkshops");
